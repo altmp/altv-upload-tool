@@ -1,0 +1,17 @@
+{
+  "name": "@altmp/upload-tool",
+  "version": "1.0.8",
+  "author": "altMP Team",
+  "bin": {
+    "alt-upload": "./cli.js"
+  },
+  "bundleDependencies": false,
+  "dependencies": {
+    "klaw": "^3.0.0",
+    "request": "^2.88.0"
+  },
+  "deprecated": false,
+  "description": "",
+  "license": "ISC",
+  "main": "index.js"
+}
