@@ -49,9 +49,22 @@ async function purgeDir(dirPath, cdnPath, version) {
 }
 
 async function clearCache(files) {
-  return CFClient.zones.purgeCache(ZONE_ID, {
-    files
-  })
+  const CHUNK_SIZE = 30;
+  const chunks = [];
+
+  // Split the files array into smaller arrays of CHUNK_SIZE items
+  for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+    chunks.push(files.slice(i, i + CHUNK_SIZE));
+  }
+
+  // Call purgeCache on each subarray using Promise.all()
+  const promises = chunks.map((chunk) => {
+    return CFClient.zones.purgeCache(ZONE_ID, {
+      files: chunk
+    });
+  });
+
+  return Promise.all(promises);
 }
 
 export async function purgeCache(filePath, cdnPath, version) {
