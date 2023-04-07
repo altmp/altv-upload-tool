@@ -55,7 +55,14 @@ async function _upload(data, cdnPath, contentType) {
     Key: cdnPath,
     ContentType: contentType,
   };
-  return uploadS3Internal(params);
+  try {
+    await uploadS3Internal(params);
+    return true;
+  }
+  catch(err) {
+    console.error(err);
+    return false;
+  }
 }
 
 async function uploadFile(filePath, cdnPath) {
