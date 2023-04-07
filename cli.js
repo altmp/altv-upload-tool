@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 
 import path from 'path';
-import { upload as legacyUpload } from './index.js';
-import { upload as s3upload } from './s3upload.js';
-import { purgeCache } from './cfCacheCleaner.js';
+import { legacyUpload, s3upload, purgeCache } from './index.js';
 
 async function start() {
   if (process.argv.length < 4) {
