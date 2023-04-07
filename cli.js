@@ -26,7 +26,7 @@ async function start() {
   }
 
   // Automatically clear update.json cache
-  if (process.env['CF_CACHE_PURGE_TOKEN'] && version) {
+  if (process.env['CF_CACHE_PURGE_TOKEN']) {
     await purgeCache(filePath, cdnPath, version);
   }
 }
