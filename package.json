@@ -1,6 +1,6 @@
 {
   "name": "@altmp/upload-tool",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "author": "altMP Team",
   "bin": {
     "alt-upload": "./cli.js"
