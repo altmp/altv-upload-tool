@@ -57,10 +57,10 @@ async function clearCache(files) {
 export async function purgeCache(filePath, cdnPath, version) {
   if (fs.existsSync(filePath)) {
     if (fs.lstatSync(filePath).isDirectory()) {
-      const filesToPurge = purgeDir(filePath, cdnPath, version);
+      const filesToPurge = await purgeDir(filePath, cdnPath, version);
       return clearCache(filesToPurge);
     } else {
-      const toPurge = [ purgeFile(filePath, cdnPath, version) ];
+      const toPurge = [ await purgeFile(filePath, cdnPath, version) ];
       return clearCache(toPurge);
     }
   } else {
