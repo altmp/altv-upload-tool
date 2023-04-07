@@ -1,5 +1,6 @@
 import Cloudflare from 'cloudflare';
 import fs from 'fs';
+import path from 'path';
 
 const TOKEN = process.env['CF_CACHE_PURGE_TOKEN'];
 const ZONE_ID = process.env['CF_CACHE_ZONE_ID'];
