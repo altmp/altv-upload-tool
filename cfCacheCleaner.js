@@ -1,6 +1,7 @@
 import Cloudflare from 'cloudflare';
 import fs from 'fs';
 import path from 'path';
+import klaw from 'klaw';
 
 const TOKEN = process.env['CF_CACHE_PURGE_TOKEN'];
 const ZONE_ID = process.env['CF_CACHE_ZONE_ID'];
@@ -13,6 +14,16 @@ const CFClient = new Cloudflare({
 
 function purgeFile(cdnPath) {
   return PURGE_URL + cdnPath;
+}
+
+function walk(dir, options) {
+  return new Promise((resolve, reject) => {
+    let items = [];
+    klaw(dir, options)
+      .on('data', item => items.push(item.path))
+      .on('end', () => resolve(items))
+      .on('error', (err, item) => reject(err, item));
+  });
 }
 
 async function purgeDir(dirPath, cdnPath, version) {
