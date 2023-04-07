@@ -1,8 +1,31 @@
-import request from 'request';
-import klaw from 'klaw';
+import { Upload } from '@aws-sdk/lib-storage';
+import { S3 } from '@aws-sdk/client-s3';
+import { lookup } from 'mime-types';
 import path from 'path';
+import klaw from 'klaw';
 import fs from 'fs';
 import crypto from 'crypto';
+
+const AWS_KEY_ID = process.env['AWS_KEY_ID'];
+const SECRET_ACCESS_KEY = process.env['AWS_SECRET_ACCESS_KEY'];
+const BUCKET = process.env['AWS_BUCKET'];
+const ENDPOINT = process.env['AWS_ENDPOINT'];
+
+const s3 = new S3({
+  credentials: {
+    accessKeyId: AWS_KEY_ID,
+    secretAccessKey: SECRET_ACCESS_KEY
+  },
+  region: 'auto',
+  endpoint: ENDPOINT
+});
+
+async function uploadS3Internal(params) {
+  await new Upload({
+    client: s3,
+    params
+  }).done();
+}
 
 function walk(dir, options) {
   return new Promise((resolve, reject) => {
@@ -24,32 +47,20 @@ function hashFile(file) {
   });
 }
 
-async function _upload(data, cdnPath) {
-  return new Promise((resolve, reject) => {
-    request({
-      url: process.env['CI_UPLOAD_URL'],
-      method: 'POST',
-      qs: { path: cdnPath },
-      headers: {
-        'secret-token': process.env['CI_DEPLOY_TOKEN']
-      },
-      body: data
-    }, (err, res) => {
-      if(err) {
-        return reject(err);
-      }
-
-      if(res.statusCode === 200) {
-        return resolve(true);
-      } else {
-        return resolve(false);
-      }
-    });
-  });
+async function _upload(data, cdnPath, contentType) {
+  const params = {
+    Bucket: BUCKET,
+    ACL: 'public-read',
+    Body: data,
+    Key: cdnPath,
+    ContentType: contentType,
+  };
+  return uploadS3Internal(params);
 }
 
 async function uploadFile(filePath, cdnPath) {
-  if (!await _upload(fs.createReadStream(filePath, { encoding: null }), cdnPath)) {
+  const contentyType = lookup(filePath) || 'text/plain'
+  if (!await _upload(fs.createReadStream(filePath, { encoding: null }), cdnPath, contentyType)) {
     console.error(`Error uploading '${filePath}' to '${cdnPath}'`);
     return false;
   }

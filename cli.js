@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
-const path = require('path');
-const { upload } = require('.');
+import path from 'path';
+import { upload as legacyUpload } from './index.js';
+import { upload as s3upload } from './s3upload.js';
+import { purgeCache } from './cfCacheCleaner.js';
 
 async function start() {
   if (process.argv.length < 4) {
@@ -13,7 +15,20 @@ async function start() {
   const cdnPath = process.argv[3];
   const version = process.argv.length >= 5 ? process.argv[4] : null;
   
-  upload(filePath, cdnPath, version)
+  // Legacy way to upload files
+  if (process.env['CI_UPLOAD_URL']) {
+    await legacyUpload(filePath, cdnPath, version);
+  }
+
+  // Upload to our R2 bucket
+  if (process.env['AWS_KEY_ID']) {
+    await s3upload(filePath, cdnPath, version);
+  }
+
+  // Automatically clear update.json cache
+  if (process.env['CF_CACHE_PURGE_TOKEN'] && version) {
+    await purgeCache(filePath, cdnPath, version);
+  }
 }
 
 start();
