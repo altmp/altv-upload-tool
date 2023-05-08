@@ -48,16 +48,26 @@ async function _upload(data, cdnPath, contentType) {
   }
 }
 
-async function uploadFile(filePath, cdnPath) {
-  debugLog('Upload file', filePath, 'to', cdnPath);
-  const contentType = lookup(filePath) || 'text/plain'
-  if (!await _upload(fs.createReadStream(filePath, { encoding: null }), cdnPath, contentType)) {
+async function uploadFile(filePath, cdnPath, attempt = 0) {
+  debugLog('Upload file', filePath, 'to', cdnPath, 'attempt', attempt);
+  try {
+    const contentType = lookup(filePath) || 'text/plain'
+    if (await _upload(fs.createReadStream(filePath, {encoding: null}), cdnPath, contentType)) {
+      console.log(`Uploaded '${filePath}' to '${cdnPath}'`);
+      return true;
+    }
+
     console.error(`Error uploading '${filePath}' to '${cdnPath}'`);
-    return false;
+  } catch(e) {
+    console.error(e);
   }
 
-  console.log(`Uploaded '${filePath}' to '${cdnPath}'`);
-  return true;
+  if (attempt < 3) {
+    return uploadFile(filePath, cdnPath, attempt + 1);
+  }
+
+  console.log('Failed to upload', filePath, 'to', cdnPath, 'after 3 attempts');
+  return false;
 }
 
 async function uploadDir(dirPath, cdnPath, version) {
