@@ -5,6 +5,8 @@ import path from 'path';
 import klaw from 'klaw';
 import fs from 'fs';
 import crypto from 'crypto';
+import {debugLog as debugLog_, hashFile, walk} from "./utils.js";
+const debugLog = (...args) => debugLog_('S3', ...args);
 
 const AWS_KEY_ID = process.env['AWS_KEY_ID'];
 const SECRET_ACCESS_KEY = process.env['AWS_SECRET_ACCESS_KEY'];
@@ -27,27 +29,8 @@ async function uploadS3Internal(params) {
   }).done();
 }
 
-function walk(dir, options) {
-  return new Promise((resolve, reject) => {
-    let items = [];
-    klaw(dir, options)
-      .on('data', item => items.push(item.path))
-      .on('end', () => resolve(items))
-      .on('error', (err, item) => reject(err, item));
-  });
-}
-
-function hashFile(file) {
-  return new Promise((resolve, reject) => {
-    const hash = crypto.createHash('sha1');
-    fs.createReadStream(file)
-      .on('error', reject)
-      .on('data', chunk => hash.update(chunk))
-      .on('end', () => resolve(hash.digest('hex')));
-  });
-}
-
 async function _upload(data, cdnPath, contentType) {
+  debugLog('Upload', cdnPath, contentType);
   const params = {
     Bucket: BUCKET,
     ACL: 'public-read',
@@ -60,14 +43,15 @@ async function _upload(data, cdnPath, contentType) {
     return true;
   }
   catch(err) {
-    console.error(err);
+    console.error('Failed to upload to S3', err);
     return false;
   }
 }
 
 async function uploadFile(filePath, cdnPath) {
-  const contentyType = lookup(filePath) || 'text/plain'
-  if (!await _upload(fs.createReadStream(filePath, { encoding: null }), cdnPath, contentyType)) {
+  debugLog('Upload file', filePath, 'to', cdnPath);
+  const contentType = lookup(filePath) || 'text/plain'
+  if (!await _upload(fs.createReadStream(filePath, { encoding: null }), cdnPath, contentType)) {
     console.error(`Error uploading '${filePath}' to '${cdnPath}'`);
     return false;
   }
@@ -78,6 +62,7 @@ async function uploadFile(filePath, cdnPath) {
 
 async function uploadDir(dirPath, cdnPath, version) {
   dirPath = path.resolve(dirPath);
+  debugLog('Upload dir', dirPath, 'to', cdnPath, version);
 
   const files = await walk(dirPath);
   const hashes = { };
@@ -101,6 +86,7 @@ async function uploadDir(dirPath, cdnPath, version) {
   }));
 
   if (version) {
+    debugLog('Generate update.json', version);
     const updateData = JSON.stringify({
       latestBuildNumber: -1,
       version: version,
@@ -120,6 +106,7 @@ async function uploadDir(dirPath, cdnPath, version) {
 }
 
 export async function upload(filePath, cdnPath, version) {
+  debugLog('Trying to upload', filePath, 'to', cdnPath, version);
   if (fs.existsSync(filePath)) {
     if (fs.lstatSync(filePath).isDirectory()) {
       return uploadDir(filePath, cdnPath, version);

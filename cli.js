@@ -2,6 +2,7 @@
 
 import path from 'path';
 import { legacyUpload, s3upload, purgeCache } from './index.js';
+import {debugLog} from "./utils.js";
 
 async function start() {
   if (process.argv.length < 4) {
@@ -15,16 +16,19 @@ async function start() {
   
   // Legacy way to upload files
   if (process.env['CI_UPLOAD_URL']) {
+    debugLog('Legacy upload');
     await legacyUpload(filePath, cdnPath, version);
   }
 
   // Upload to our R2 bucket
   if (process.env['AWS_KEY_ID']) {
+    debugLog('S3 upload');
     await s3upload(filePath, cdnPath, version);
   }
 
   // Automatically clear update.json cache
   if (process.env['CF_CACHE_PURGE_TOKEN']) {
+    debugLog('Purge cache');
     try {
       await purgeCache(filePath, cdnPath, version);
     }

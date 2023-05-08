@@ -3,26 +3,8 @@ import klaw from 'klaw';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-
-function walk(dir, options) {
-  return new Promise((resolve, reject) => {
-    let items = [];
-    klaw(dir, options)
-      .on('data', item => items.push(item.path))
-      .on('end', () => resolve(items))
-      .on('error', (err, item) => reject(err, item));
-  });
-}
-
-function hashFile(file) {
-  return new Promise((resolve, reject) => {
-    const hash = crypto.createHash('sha1');
-    fs.createReadStream(file)
-      .on('error', reject)
-      .on('data', chunk => hash.update(chunk))
-      .on('end', () => resolve(hash.digest('hex')));
-  });
-}
+import {debugLog as debugLog_, hashFile, walk} from "./utils.js";
+const debugLog = (...args) => debugLog_('S3', ...args);
 
 async function _upload(data, cdnPath) {
   return new Promise((resolve, reject) => {
@@ -60,6 +42,7 @@ async function uploadFile(filePath, cdnPath) {
 
 async function uploadDir(dirPath, cdnPath, version) {
   dirPath = path.resolve(dirPath);
+  debugLog('Upload dir', dirPath, 'to', cdnPath, version);
 
   const files = await walk(dirPath);
   const hashes = { };
@@ -83,6 +66,7 @@ async function uploadDir(dirPath, cdnPath, version) {
   }));
 
   if (version) {
+    debugLog('Generate update.json', version);
     const updateData = JSON.stringify({
       latestBuildNumber: -1,
       version: version,
