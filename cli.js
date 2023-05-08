@@ -20,6 +20,7 @@ async function start() {
     await legacyUpload(filePath, cdnPath, version);
   }
 
+  debugLog('AWS KEY is', process.env['AWS_KEY_ID']);
   // Upload to our R2 bucket
   if (process.env['AWS_KEY_ID']) {
     debugLog('S3 upload');

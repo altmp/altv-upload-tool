@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import {debugLog as debugLog_, hashFile, walk} from "./utils.js";
-const debugLog = (...args) => debugLog_('S3', ...args);
+const debugLog = (...args) => debugLog_('LEGACY', ...args);
 
 async function _upload(data, cdnPath) {
   return new Promise((resolve, reject) => {
