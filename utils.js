@@ -3,8 +3,7 @@ import fs from "fs";
 import klaw from "klaw";
 
 export function debugLog(...args) {
-    if (!process.env['ENABLE_DEBUG_LOGS']) return;
-    console.log('DEBUG', ...args);
+    console.log('::debug::', ...args);
 }
 
 export async function hashFile(file) {
