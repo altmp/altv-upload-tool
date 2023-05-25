@@ -1,5 +1,6 @@
 import { Upload } from '@aws-sdk/lib-storage';
 import { S3 } from '@aws-sdk/client-s3';
+import { lookup } from 'mime-types';
 import { PromisePool } from '@supercharge/promise-pool';
 import path from 'path';
 import fs from 'fs';
