@@ -84,7 +84,7 @@ async function uploadDir(dirPath, cdnPath, version) {
     const stats = fs.statSync(file);
     if (!stats.isDirectory()) {
       const filePath = file.replace(dirPath, '').substring(1).replace(/\\/g, '/');
-      const key = cdnPath + '/' + filePath;
+      const key = (cdnPath.length > 0 ? (cdnPath + '/') : '') + filePath;
   
       if (version) {
           hashes[filePath] = await hashFile(file);
