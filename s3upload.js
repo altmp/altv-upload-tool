@@ -49,7 +49,7 @@ async function _upload(data, cdnPath, contentType) {
 async function uploadFile(filePath, cdnPath, attempt = 0) {
   debugLog('Upload file', filePath, 'to', cdnPath, 'attempt', attempt);
   try {
-    const contentType = 'application/octet-stream'
+    const contentType = lookup(filePath) || 'application/octet-stream';
     if (await _upload(fs.createReadStream(filePath, {encoding: null}), cdnPath, contentType)) {
       console.log(`Uploaded '${filePath}' to '${cdnPath}'`);
       return true;
