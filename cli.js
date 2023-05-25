@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import path from 'path';
-import { legacyUpload, s3upload, purgeCache } from './index.js';
-import {debugLog} from "./utils.js";
+import { s3upload, purgeCache } from './index.js';
+import { debugLog } from "./utils.js";
 
 async function start() {
   if (process.argv.length < 3) {
