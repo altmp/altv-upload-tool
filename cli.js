@@ -14,13 +14,6 @@ async function start() {
   const cdnPath = process.argv[3] ?? "";
   const version = process.argv.length >= 5 ? process.argv[4] : null;
   
-  // Legacy way to upload files
-  if (process.env['CI_UPLOAD_URL']) {
-    debugLog('Legacy upload');
-    await legacyUpload(filePath, cdnPath, version);
-  }
-
-  debugLog('AWS KEY is', process.env['AWS_KEY_ID']);
   // Upload to our R2 bucket
   if (process.env['AWS_KEY_ID']) {
     debugLog('S3 upload');
