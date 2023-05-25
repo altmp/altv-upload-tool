@@ -1,10 +1,8 @@
 import { Upload } from '@aws-sdk/lib-storage';
 import { S3 } from '@aws-sdk/client-s3';
-import { lookup } from 'mime-types';
+import { PromisePool } from '@supercharge/promise-pool';
 import path from 'path';
-import klaw from 'klaw';
 import fs from 'fs';
-import crypto from 'crypto';
 import {debugLog as debugLog_, hashFile, walk} from "./utils.js";
 const debugLog = (...args) => debugLog_('S3', ...args);
 
@@ -51,7 +49,7 @@ async function _upload(data, cdnPath, contentType) {
 async function uploadFile(filePath, cdnPath, attempt = 0) {
   debugLog('Upload file', filePath, 'to', cdnPath, 'attempt', attempt);
   try {
-    const contentType = lookup(filePath) || 'text/plain'
+    const contentType = 'application/octet-stream'
     if (await _upload(fs.createReadStream(filePath, {encoding: null}), cdnPath, contentType)) {
       console.log(`Uploaded '${filePath}' to '${cdnPath}'`);
       return true;
@@ -80,20 +78,32 @@ async function uploadDir(dirPath, cdnPath, version) {
 
   let result = true;
 
-  await Promise.all(files.map(async file => {
+  const uploadQueue = [];
+
+  files.map(async file => {
     const stats = fs.statSync(file);
     if (!stats.isDirectory()) {
       const filePath = file.replace(dirPath, '').substring(1).replace(/\\/g, '/');
       const key = cdnPath + '/' + filePath;
   
-      hashes[filePath] = await hashFile(file);
-      sizes[filePath] = stats.size;
-      
-      if (!await uploadFile(file, key)) {
-        result = false;
+      if (version) {
+          hashes[filePath] = await hashFile(file);
+          sizes[filePath] = stats.size;
       }
+      
+      uploadQueue.push({ file, key });
     }
-  }));
+  });
+
+  const { results, errors } = await PromisePool.for(uploadQueue).withConcurrency(10).process(async queueItem => {
+    return await uploadFile(queueItem.file, queueItem.key);
+  });
+
+  for (let i = 0; i < results.length; ++i) {
+    if (!results[i]) {
+      result = false;
+    }
+  }
 
   if (version) {
     debugLog('Generate update.json', version);

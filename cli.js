@@ -5,13 +5,13 @@ import { legacyUpload, s3upload, purgeCache } from './index.js';
 import {debugLog} from "./utils.js";
 
 async function start() {
-  if (process.argv.length < 4) {
-    console.log('USAGE: alt-upload [file] [cdn_path] [version]');
+  if (process.argv.length < 3) {
+    console.log('USAGE: alt-upload source_path [cdn_path] [version]');
     return;
   }
 
   const filePath = path.resolve(process.argv[2]);
-  const cdnPath = process.argv[3];
+  const cdnPath = process.argv[3] ?? "";
   const version = process.argv.length >= 5 ? process.argv[4] : null;
   
   // Legacy way to upload files
