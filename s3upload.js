@@ -81,20 +81,24 @@ async function uploadDir(dirPath, cdnPath, version) {
 
   const uploadQueue = [];
 
-  files.map(async file => {
+  console.log(files);
+
+  for (let i = 0; i < files.length; ++i) {
+    const file = files[i];
+
     const stats = fs.statSync(file);
     if (!stats.isDirectory()) {
       const filePath = file.replace(dirPath, '').substring(1).replace(/\\/g, '/');
       const key = (cdnPath.length > 0 ? (cdnPath + '/') : '') + filePath;
   
-      if (version) {
-          hashes[filePath] = await hashFile(file);
-          sizes[filePath] = stats.size;
-      }
+      hashes[filePath] = await hashFile(file);
+      sizes[filePath] = stats.size;
       
       uploadQueue.push({ file, key });
     }
-  });
+  }
+
+  console.log(uploadQueue);
 
   const { results, errors } = await PromisePool.for(uploadQueue).withConcurrency(10).process(async queueItem => {
     return await uploadFile(queueItem.file, queueItem.key);
