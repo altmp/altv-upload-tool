@@ -1,5 +1,5 @@
 import { Upload } from '@aws-sdk/lib-storage';
-import { S3 } from '@aws-sdk/client-s3';
+import {HeadObjectCommand, S3} from '@aws-sdk/client-s3';
 import { lookup } from 'mime-types';
 import { PromisePool } from '@supercharge/promise-pool';
 import path from 'path';
@@ -50,12 +50,22 @@ async function _upload(data, cdnPath, contentType) {
 async function uploadFile(filePath, cdnPath, attempt = 0) {
   debugLog('Upload file', filePath, 'to', cdnPath, 'attempt', attempt);
   try {
+    const size = (await fs.promises.stat(filePath)).size;
     const contentType = lookup(filePath) || 'application/octet-stream';
     if (await _upload(fs.createReadStream(filePath, {encoding: null}), cdnPath, contentType)) {
       console.log(`Uploaded '${filePath}' to '${cdnPath}'`);
-      return true;
-    }
 
+      const head = await s3.send(new HeadObjectCommand({
+        Bucket: BUCKET,
+        Key: cdnPath
+      }));
+
+      if (+head.ContentLength === size) {
+        return true;
+      }
+
+      console.error(`Uploaded file size doesnt match. Local size: ${size}. Uploaded size: ${head.ContentLength}`)
+    }
     console.error(`Error uploading '${filePath}' to '${cdnPath}'`);
   } catch(e) {
     console.error(e);
