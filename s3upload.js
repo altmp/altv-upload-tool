@@ -119,7 +119,7 @@ async function uploadDir(dirPath, cdnPath, version) {
       sizeList: sizes
     });
     
-    if (!await _upload(updateData, cdnPath + '/update.json')) {
+    if (!await _upload(updateData, cdnPath + '/update.json', 'application/json')) {
       console.error(`Error uploading 'update.json' to key '${cdnPath}/update.json'`);
       result = false;
     } else {
