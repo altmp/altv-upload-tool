@@ -79,9 +79,9 @@ async function uploadFile(filePath, cdnPath, attempt = 0) {
   return false;
 }
 
-async function uploadDir(dirPath, cdnPath, version) {
+async function uploadDir(dirPath, cdnPath, version, sdkVersion) {
   dirPath = path.resolve(dirPath);
-  debugLog('Upload dir', dirPath, 'to', cdnPath, version);
+  debugLog('Upload dir', dirPath, 'to', cdnPath, version, sdkVersion);
 
   const files = await walk(dirPath);
   const hashes = { };
@@ -125,6 +125,7 @@ async function uploadDir(dirPath, cdnPath, version) {
     const updateData = JSON.stringify({
       latestBuildNumber: -1,
       version: version,
+      sdkVersion: sdkVersion || undefined,
       hashList: hashes,
       sizeList: sizes
     });
@@ -140,13 +141,13 @@ async function uploadDir(dirPath, cdnPath, version) {
   return result;
 }
 
-export async function upload(filePath, cdnPath, version) {
-  debugLog('Trying to upload', filePath, 'to', cdnPath, version);
+export async function upload(filePath, cdnPath, version, sdkVersion) {
+  debugLog('Trying to upload', filePath, 'to', cdnPath, version, sdkVersion);
   if (fs.existsSync(filePath)) {
     if (fs.lstatSync(filePath).isDirectory()) {
-      return uploadDir(filePath, cdnPath, version);
+      return uploadDir(filePath, cdnPath, version, sdkVersion);
     } else {
-      return uploadFile(filePath, cdnPath, version);
+      return uploadFile(filePath, cdnPath);
     }
   } else {
     console.error('File not found');
