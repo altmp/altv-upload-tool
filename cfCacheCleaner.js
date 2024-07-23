@@ -50,7 +50,8 @@ async function clearCache(files) {
 
   // Call purgeCache on each subarray using Promise.all()
   const promises = chunks.map((chunk) => {
-    return CFClient.zones.purgeCache(ZONE_ID, {
+    return CFClient.cache.purge({
+      zone_id: ZONE_ID,
       files: chunk
     });
   });
