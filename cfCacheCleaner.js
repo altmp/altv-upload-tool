@@ -9,7 +9,7 @@ const ZONE_ID = process.env['CF_CACHE_ZONE_ID'];
 const PURGE_URL = process.env['CF_CACHE_PURGE_URL']; // Should be with "/" in the end
 
 const CFClient = new Cloudflare({
-  token: TOKEN
+  apiToken: TOKEN
 });
 
 
