@@ -5,7 +5,7 @@ import { PromisePool } from '@supercharge/promise-pool';
 import path from 'path';
 import fs from 'fs';
 import {debugLog as debugLog_, hashFile, walk} from "./utils.js";
-import { createGzipFileStream } from "./zip.js";
+import { createGzipFileBuffer } from "./zip.js";
 const debugLog = (...args) => debugLog_('S3', ...args);
 
 const AWS_KEY_ID = process.env['AWS_KEY_ID'];
@@ -48,7 +48,7 @@ async function _upload(data, cdnPath, contentType) {
   }
 }
 
-async function uploadFile(filePath, cdnPath, attempt = 0) {
+async function uploadFile(filePath, cdnPath, attempt = 0, gzipBuffer = {}) {
   debugLog('Upload file', filePath, 'to', cdnPath, 'attempt', attempt);
   try {
     const size = (await fs.promises.stat(filePath)).size;
@@ -63,7 +63,7 @@ async function uploadFile(filePath, cdnPath, attempt = 0) {
 
       if (+head.ContentLength === size) {       
         if(path.extname(filePath) == ".dll") {
-          uploadGzipFile(filePath, cdnPath);
+          uploadGzipFile(filePath, cdnPath, 0, gzipBuffer);
         }        
         return true;
       }
@@ -83,18 +83,16 @@ async function uploadFile(filePath, cdnPath, attempt = 0) {
   return false;
 }
 
-async function uploadGzipFile(filePath, cdnPath, attempt = 0) {
+async function uploadGzipFile(filePath, cdnPath, attempt = 0, gzipBuffer = {}) {
   debugLog('Upload gzip file', filePath, 'to', cdnPath, 'attempt', attempt);
 
   const cdnPathGz = cdnPath + '.gz';
   const filePathGz = filePath + '.gz';
 
   try {
-    let wrapperSize = { value: 0 }
-    const gzipFileStream = await createGzipFileStream(filePath, wrapperSize);
-    const sizeGz = wrapperSize.value;
+    const sizeGz = gzipBuffer.length;
     const contentType = 'application/gzip';
-    if (await _upload(gzipFileStream, cdnPathGz, contentType)) {
+    if (await _upload(gzipBuffer, cdnPathGz, contentType)) {
       console.log(`Uploaded '${filePathGz}' to '${cdnPathGz}'`);
   
       const head = await s3.send(new HeadObjectCommand({
@@ -128,6 +126,7 @@ async function uploadDir(dirPath, cdnPath, version, sdkVersion) {
   const files = await walk(dirPath);
   const hashes = { };
   const sizes = { };
+  const gzipBuffer = { };
 
   let result = true;
 
@@ -135,7 +134,9 @@ async function uploadDir(dirPath, cdnPath, version, sdkVersion) {
 
   console.log(files);
 
+  let filesInfosForServer = [];
   for (let i = 0; i < files.length; ++i) {
+
     const file = files[i];
 
     const stats = fs.statSync(file);
@@ -144,16 +145,30 @@ async function uploadDir(dirPath, cdnPath, version, sdkVersion) {
       const key = (cdnPath.length > 0 ? (cdnPath + '/') : '') + filePath;
   
       hashes[filePath] = await hashFile(file);
-      sizes[filePath] = stats.size;
+      sizes[filePath] = stats.size;      
+      let gzipBuffer = await createGzipFileBuffer(file);
       
-      uploadQueue.push({ file, key });
+      uploadQueue.push({ file, key, gzipBuffer });
+      
+      let fileInfo = {
+        path: "",
+        size: 0,
+        sha1: "",
+        encoding: {},
+      }  
+      
+      fileInfo.path = filePath;
+      fileInfo.size = stats.size;
+      fileInfo.sha1 = hashes[filePath];
+      fileInfo.encoding["gz"] = gzipBuffer.length;
+      filesInfosForServer.push(fileInfo);
     }
   }
 
   console.log(uploadQueue);
 
   const { results, errors } = await PromisePool.for(uploadQueue).withConcurrency(10).process(async queueItem => {
-    return await uploadFile(queueItem.file, queueItem.key);
+    return await uploadFile(queueItem.file, queueItem.key, 0, queueItem.gzipBuffer);
   });
 
   for (let i = 0; i < results.length; ++i) {
@@ -167,6 +182,7 @@ async function uploadDir(dirPath, cdnPath, version, sdkVersion) {
     const updateData = JSON.stringify({
       version: version,
       sdkVersion: sdkVersion || undefined,
+      files: filesInfosForServer,
       hashList: hashes,
       sizeList: sizes
     });
