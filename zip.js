@@ -3,7 +3,7 @@ import fs from 'fs';
 import zlib from 'zlib';
 import klaw from 'klaw';
 import { promisify } from 'util';
-import { pipeline } from 'stream';
+import { pipeline, PassThrough  } from 'stream';
 import { debugLog } from "./utils.js";
 
 const pipe = promisify(pipeline);
@@ -24,6 +24,39 @@ async function gzipFile(source, destination) {
   } catch (error) {
     console.error(`Error archiving a file ${source}:`, error);
   }
+}
+
+export async function createGzipFileStream(source, wrapperSize) {
+  try {
+    const sourceStream = fs.createReadStream(source);
+    const gzipStream = zlib.createGzip();
+    const passThrough = new PassThrough();
+
+    return new Promise((resolve, reject) => {
+      gzipStream.on('data', (chunk) => {
+        wrapperSize.value += chunk.length;
+      });
+      gzipStream.on('error', reject);
+      gzipStream.on('end', () => {
+      });
+
+      let compressedChunks = [];
+      passThrough.on('data', (chunk) => {
+        compressedChunks.push(chunk);
+      });
+      
+      passThrough.on('end', () => {
+        const compressedData = Buffer.concat(compressedChunks);
+        resolve(compressedData);
+      });
+
+      sourceStream.pipe(gzipStream)
+      gzipStream.pipe(passThrough);
+    });
+  } catch (error) {
+    console.error(`Error archiving a file ${source}:`, error);
+  }
+  return null;
 }
 
 /**

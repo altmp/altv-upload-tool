@@ -5,6 +5,7 @@ import { PromisePool } from '@supercharge/promise-pool';
 import path from 'path';
 import fs from 'fs';
 import {debugLog as debugLog_, hashFile, walk} from "./utils.js";
+import { createGzipFileStream } from "./zip.js";
 const debugLog = (...args) => debugLog_('S3', ...args);
 
 const AWS_KEY_ID = process.env['AWS_KEY_ID'];
@@ -60,7 +61,10 @@ async function uploadFile(filePath, cdnPath, attempt = 0) {
         Key: cdnPath
       }));
 
-      if (+head.ContentLength === size) {
+      if (+head.ContentLength === size) {       
+        if(path.extname(filePath) == ".dll") {
+          uploadGzipFile(filePath, cdnPath);
+        }        
         return true;
       }
 
@@ -76,6 +80,44 @@ async function uploadFile(filePath, cdnPath, attempt = 0) {
   }
 
   console.log('Failed to upload', filePath, 'to', cdnPath, 'after 3 attempts');
+  return false;
+}
+
+async function uploadGzipFile(filePath, cdnPath, attempt = 0) {
+  debugLog('Upload gzip file', filePath, 'to', cdnPath, 'attempt', attempt);
+
+  const cdnPathGz = cdnPath + '.gz';
+  const filePathGz = filePath + '.gz';
+
+  try {
+    let wrapperSize = { value: 0 }
+    const gzipFileStream = await createGzipFileStream(filePath, wrapperSize);
+    const sizeGz = wrapperSize.value;
+    const contentType = 'application/gzip';
+    if (await _upload(gzipFileStream, cdnPathGz, contentType)) {
+      console.log(`Uploaded '${filePathGz}' to '${cdnPathGz}'`);
+  
+      const head = await s3.send(new HeadObjectCommand({
+        Bucket: BUCKET,
+        Key: cdnPathGz
+      }));
+  
+      if (+head.ContentLength === sizeGz) {
+        return true;
+      }
+  
+      console.error(`Uploaded gzip file size doesnt match. Local size: ${sizeGz}. Uploaded size: ${head.ContentLength}`)
+    }
+    console.error(`Error uploading '${filePathGz}' to '${cdnPathGz}'`);
+  } catch(e) {
+    console.error(e);
+  }
+
+  if (attempt < 3) {
+    return uploadGzipFile(filePath, cdnPath, attempt + 1);
+  }
+
+  console.log('Failed to upload', filePathGz, 'to', cdnPathGz, 'after 3 attempts');
   return false;
 }
 
@@ -123,7 +165,6 @@ async function uploadDir(dirPath, cdnPath, version, sdkVersion) {
   if (version) {
     debugLog('Generate update.json', version);
     const updateData = JSON.stringify({
-      latestBuildNumber: -1,
       version: version,
       sdkVersion: sdkVersion || undefined,
       hashList: hashes,
