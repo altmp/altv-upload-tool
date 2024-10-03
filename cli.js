@@ -3,6 +3,8 @@
 import path from 'path';
 import { s3upload, purgeCache } from './index.js';
 import { debugLog } from "./utils.js";
+import { compressDllFiles } from "./zip.js";
+
 
 async function start() {
   if (process.argv.length < 3) {
@@ -14,6 +16,8 @@ async function start() {
   const cdnPath = process.argv[3] ?? "";
   const version = process.argv.length >= 5 ? process.argv[4] : null;
   const sdkVersion = process.argv.length >= 6 ? process.argv[5] : null;
+
+  await compressDllFiles(filePath);
   
   // Upload to our R2 bucket
   if (process.env['AWS_KEY_ID']) {
