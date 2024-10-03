@@ -26,16 +26,13 @@ async function gzipFile(source, destination) {
   }
 }
 
-export async function createGzipFileStream(source, wrapperSize) {
+export async function createGzipFileBuffer(source) {
   try {
     const sourceStream = fs.createReadStream(source);
     const gzipStream = zlib.createGzip();
     const passThrough = new PassThrough();
 
     return new Promise((resolve, reject) => {
-      gzipStream.on('data', (chunk) => {
-        wrapperSize.value += chunk.length;
-      });
       gzipStream.on('error', reject);
       gzipStream.on('end', () => {
       });
