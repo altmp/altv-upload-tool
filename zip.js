@@ -26,6 +26,10 @@ async function gzipFile(source, destination) {
   }
 }
 
+/**
+ * Archiving a file by gzip in memory without file
+ * @param {string} source - Path to the source file
+ */
 export async function createGzipFileBuffer(source) {
   try {
     const sourceStream = fs.createReadStream(source);
