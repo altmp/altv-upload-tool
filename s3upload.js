@@ -54,7 +54,7 @@ async function _upload(data, cdnPath, contentType) {
  * @param {string} filePath - Path to the source file
  * @param {array} allowedExtensions - Extensions
  */
-async function filterFilesByExtension(filePath, allowedExtensions) {
+function filterFilesByExtension(filePath, allowedExtensions) {
   const fileExtension = path.extname(filePath).toLowerCase();  
   return allowedExtensions.includes(fileExtension);
 }
@@ -157,9 +157,6 @@ async function uploadDir(dirPath, cdnPath, version, sdkVersion) {
   
       hashes[filePath] = await hashFile(file);
       sizes[filePath] = stats.size;      
-      let gzipBuffer = await createGzipFileBuffer(file);
-      
-      uploadQueue.push({ file, key, gzipBuffer });
       
       let fileInfo = {
         path: "",
@@ -171,7 +168,14 @@ async function uploadDir(dirPath, cdnPath, version, sdkVersion) {
       fileInfo.path = filePath;
       fileInfo.size = stats.size;
       fileInfo.sha1 = hashes[filePath];
-      fileInfo.encoding["gz"] = gzipBuffer.length;
+
+      let gzipBuffer = {};
+      if(filterFilesByExtension(filePath, compressionExtensions)) {
+        gzipBuffer = await createGzipFileBuffer(file);    
+        fileInfo.encoding["gz"] = gzipBuffer.length;
+      } 
+      uploadQueue.push({ file, key, gzipBuffer });
+
       filesInfosForServer.push(fileInfo);
     }
   }
