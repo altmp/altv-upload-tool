@@ -12,6 +12,7 @@ const AWS_KEY_ID = process.env['AWS_KEY_ID'];
 const SECRET_ACCESS_KEY = process.env['AWS_SECRET_ACCESS_KEY'];
 const BUCKET = process.env['AWS_BUCKET'];
 const ENDPOINT = process.env['AWS_ENDPOINT'];
+const compressionExtensions = [".dll"];
 
 const s3 = new S3({
   credentials: {
@@ -48,6 +49,16 @@ async function _upload(data, cdnPath, contentType) {
   }
 }
 
+/**
+ * Check the file extension for occurrence in the array
+ * @param {string} filePath - Path to the source file
+ * @param {array} allowedExtensions - Extensions
+ */
+async function filterFilesByExtension(filePath, allowedExtensions) {
+  const fileExtension = path.extname(filePath).toLowerCase();  
+  return allowedExtensions.includes(fileExtension);
+}
+
 async function uploadFile(filePath, cdnPath, attempt = 0, gzipBuffer = {}) {
   debugLog('Upload file', filePath, 'to', cdnPath, 'attempt', attempt);
   try {
@@ -61,8 +72,8 @@ async function uploadFile(filePath, cdnPath, attempt = 0, gzipBuffer = {}) {
         Key: cdnPath
       }));
 
-      if (+head.ContentLength === size) {       
-        if(path.extname(filePath) == ".dll") {
+      if (+head.ContentLength === size) {      
+        if(filterFilesByExtension(filePath, compressionExtensions)) {
           uploadGzipFile(filePath, cdnPath, 0, gzipBuffer);
         }        
         return true;
