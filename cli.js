@@ -4,6 +4,7 @@ import path from 'path';
 import { s3upload, purgeCache } from './index.js';
 import { debugLog } from "./utils.js";
 
+
 async function start() {
   if (process.argv.length < 3) {
     console.log('USAGE: alt-upload source_path [cdn_path] [version] [sdk_version]');
